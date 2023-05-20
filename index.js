@@ -1,6 +1,5 @@
 const express = require("express");
 const cors = require("cors");
-const helmet = require("helmet");
 require("dotenv").config();
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const port = process.env.PORT || 5000;
@@ -48,7 +47,7 @@ async function startServer() {
     // Update a user
     app.put("/users/:id", async (req, res) => {
       const id = req.params.id;
-      const filter = { _id: ObjectId(id) };
+      const filter = { _id: new ObjectId(id) };
       const updateDoc = { $set: req.body };
       const option = { upsert: true };
       const result = await userCollection.updateOne(filter, updateDoc, option);
