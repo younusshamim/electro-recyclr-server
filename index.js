@@ -24,12 +24,21 @@ async function startServer() {
   try {
     const userCollection = client.db("electroRecyclr").collection("users");
 
-    // get user info
+    // get individual user info
     app.get("/users/:email", async (req, res) => {
       const { email } = req.params;
       const query = { email };
       const user = await userCollection.findOne(query);
       res.send(user);
+    });
+
+    // get all users
+    app.get("/users", async (req, res) => {
+      const { status, search } = req.query;
+      const query = search.length > 0 ? { $text: { $search: search } } : {};
+      const cursor = userCollection.find(query).sort({ _id: -1 });
+      const users = await cursor.toArray();
+      res.send(users);
     });
 
     // Create a new user
