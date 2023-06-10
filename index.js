@@ -14,7 +14,7 @@ const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@clu
 const client = new MongoClient(uri, {
   serverApi: {
     version: ServerApiVersion.v1,
-    strict: true,
+    strict: false,
     deprecationErrors: true,
   },
 });
@@ -34,8 +34,11 @@ async function startServer() {
 
     // get all users
     app.get("/users", async (req, res) => {
-      const { status, search } = req.query;
-      const query = search.length > 0 ? { $text: { $search: search } } : {};
+      const { status, email, mobile } = req.query;
+      const query = {};
+      if (status) query.status = status;
+      if (email) query.email = { $regex: email, $options: "i" };
+      if (mobile) query.mobile = { $regex: mobile };
       const cursor = userCollection.find(query).sort({ _id: -1 });
       const users = await cursor.toArray();
       res.send(users);
@@ -66,10 +69,10 @@ async function startServer() {
     // make admin
     app.put("/users/admin/:id", async (req, res) => {
       const id = req.params.id;
-      const filter = { _id: ObjectId(id) };
-      const updateDoc = { $set: { role: "admin" } };
-      const option = { upsert: true };
-      const result = await userCollection.updateOne(filter, updateDoc, option);
+      const filter = { _id: new ObjectId(id) };
+      const updateDoc = { $set: { status: "admin" } };
+      const options = { upsert: true };
+      const result = await userCollection.updateOne(filter, updateDoc, options);
       res.send(result);
     });
 
