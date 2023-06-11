@@ -65,11 +65,12 @@ async function startServer() {
       res.send(result);
     });
 
-    // make admin
-    app.put("/users/admin/:id", async (req, res) => {
-      const id = req.params.id;
+    // change status
+    app.put("/users/status/:id", async (req, res) => {
+      const { id } = req.params;
+      const { status } = req.query;
       const filter = { _id: new ObjectId(id) };
-      const updateDoc = { $set: { status: "Admin" } };
+      const updateDoc = { $set: { status: status } };
       const options = { upsert: true };
       const result = await userCollection.updateOne(filter, updateDoc, options);
       res.send(result);
