@@ -34,11 +34,10 @@ async function startServer() {
 
     // get all users
     app.get("/users", async (req, res) => {
-      const { status, email, mobile } = req.query;
+      const { status, search } = req.query;
       const query = {};
       if (status) query.status = status;
-      if (email) query.email = { $regex: email, $options: "i" };
-      if (mobile) query.mobile = { $regex: mobile };
+      if (search) query.email = { $regex: search, $options: "i" };
       const cursor = userCollection.find(query).sort({ _id: -1 });
       const users = await cursor.toArray();
       res.send(users);
@@ -70,7 +69,7 @@ async function startServer() {
     app.put("/users/admin/:id", async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
-      const updateDoc = { $set: { status: "admin" } };
+      const updateDoc = { $set: { status: "Admin" } };
       const options = { upsert: true };
       const result = await userCollection.updateOne(filter, updateDoc, options);
       res.send(result);
