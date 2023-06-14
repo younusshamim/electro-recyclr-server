@@ -23,6 +23,9 @@ const client = new MongoClient(uri, {
 async function startServer() {
   try {
     const userCollection = client.db("electroRecyclr").collection("users");
+    const categoryCollection = client
+      .db("electroRecyclr")
+      .collection("categories");
 
     // get individual user info
     app.get("/users/:email", async (req, res) => {
@@ -74,6 +77,13 @@ async function startServer() {
       const options = { upsert: true };
       const result = await userCollection.updateOne(filter, updateDoc, options);
       res.send(result);
+    });
+
+    // get all categories
+    app.get("/categories", async (req, res) => {
+      const cursor = categoryCollection.find({});
+      const categories = await cursor.toArray();
+      res.send(categories);
     });
 
     app.get("/", (req, res) => res.send("Server Started!"));
