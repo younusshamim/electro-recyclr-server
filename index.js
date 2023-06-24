@@ -26,6 +26,9 @@ async function startServer() {
     const categoryCollection = client
       .db("electroRecyclr")
       .collection("categories");
+    const productCollection = client
+      .db("electroRecyclr")
+      .collection("products");
 
     // get individual user info
     app.get("/users/:email", async (req, res) => {
@@ -55,6 +58,12 @@ async function startServer() {
         return res.status(400).send(`User with email ${email} already exists.`);
       }
       const result = await userCollection.insertOne(req.body);
+      res.send(result);
+    });
+
+    // Add a product
+    app.post("/products", async (req, res) => {
+      const result = await productCollection.insertOne(req.body);
       res.send(result);
     });
 
