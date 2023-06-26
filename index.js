@@ -63,7 +63,8 @@ async function startServer() {
 
     // Add a product
     app.post("/products", async (req, res) => {
-      const result = await productCollection.insertOne(req.body);
+      const payload = { postedTime: new Date().toUTCString(), ...req.body };
+      const result = await productCollection.insertOne(payload);
       res.send(result);
     });
 
