@@ -30,15 +30,43 @@ async function startServer() {
       .db("electroRecyclr")
       .collection("products");
 
-    // get individual user info
-    app.get("/users/:email", async (req, res) => {
-      const { email } = req.params;
-      const query = { email };
-      const user = await userCollection.findOne(query);
-      res.send(user);
+    // categories api's
+    app.get("/categories", async (req, res) => {
+      const cursor = categoryCollection.find({});
+      const categories = await cursor.toArray();
+      res.send(categories);
     });
 
-    // get all users
+    // products api's
+    app.post("/products", async (req, res) => {
+      const payload = { postedTime: new Date().toUTCString(), ...req.body };
+      const result = await productCollection.insertOne(payload);
+      res.send(result);
+    });
+
+    app.get("/products", async (req, res) => {
+      const { district, categoryId } = req.query;
+      const page = parseInt(req.query.page);
+      const size = parseInt(req.query.size);
+      const query = {};
+      if (district) query.district = district;
+      if (categoryId) query.categoryId = categoryId;
+      const cursor = productCollection.find(query).sort({ _id: -1 });
+      const products = await cursor
+        .skip(page * size)
+        .limit(size)
+        .toArray();
+      res.send(products);
+    });
+
+    app.get("/products/:id", async (req, res) => {
+      const { id } = req.params;
+      const query = { _id: new ObjectId(id) };
+      const product = await productCollection.findOne(query);
+      res.send(product);
+    });
+
+    // users api's
     app.get("/users", async (req, res) => {
       const { status, search } = req.query;
       const query = {};
@@ -49,7 +77,13 @@ async function startServer() {
       res.send(users);
     });
 
-    // Create a new user
+    app.get("/users/:email", async (req, res) => {
+      const { email } = req.params;
+      const query = { email };
+      const user = await userCollection.findOne(query);
+      res.send(user);
+    });
+
     app.post("/users", async (req, res) => {
       const { email } = req.body;
       const query = { email };
@@ -61,14 +95,6 @@ async function startServer() {
       res.send(result);
     });
 
-    // Add a product
-    app.post("/products", async (req, res) => {
-      const payload = { postedTime: new Date().toUTCString(), ...req.body };
-      const result = await productCollection.insertOne(payload);
-      res.send(result);
-    });
-
-    // Update a user
     app.put("/users/:id", async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
@@ -78,7 +104,6 @@ async function startServer() {
       res.send(result);
     });
 
-    // change status
     app.put("/users/status/:id", async (req, res) => {
       const { id } = req.params;
       const { status } = req.query;
@@ -87,13 +112,6 @@ async function startServer() {
       const options = { upsert: true };
       const result = await userCollection.updateOne(filter, updateDoc, options);
       res.send(result);
-    });
-
-    // get all categories
-    app.get("/categories", async (req, res) => {
-      const cursor = categoryCollection.find({});
-      const categories = await cursor.toArray();
-      res.send(categories);
     });
 
     app.get("/", (req, res) => res.send("Server Started!"));
