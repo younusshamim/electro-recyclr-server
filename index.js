@@ -48,13 +48,29 @@ async function startServer() {
       const { district, categoryId } = req.query;
       const page = parseInt(req.query.page);
       const size = parseInt(req.query.size);
-      const query = {};
-      if (district) query.district = district;
-      if (categoryId) query.categoryId = categoryId;
-      const cursor = productCollection.find(query).sort({ _id: -1 });
-      const products = await cursor
-        .skip(page * size)
-        .limit(size)
+      const filter = {};
+      if (district) filter.district = district;
+      if (categoryId) filter.categoryId = categoryId;
+
+      const products = await productCollection
+        .aggregate([
+          { $match: filter },
+          { $sort: { _id: -1 } },
+          { $skip: page * size },
+          { $limit: size },
+          {
+            $lookup: {
+              from: "users",
+              localField: "userEmail",
+              foreignField: "email",
+              pipeline: [],
+              as: "userInfo",
+            },
+          },
+          {
+            $unwind: "$userInfo",
+          },
+        ])
         .toArray();
       res.send(products);
     });
