@@ -63,13 +63,21 @@ async function startServer() {
               from: "users",
               localField: "userEmail",
               foreignField: "email",
-              pipeline: [],
-              as: "userInfo",
+              pipeline: [
+                {
+                  $project: {
+                    _id: 1,
+                    name: 1,
+                    email: 1,
+                    mobile: 1,
+                    status: 1,
+                  },
+                },
+              ],
+              as: "sellerInfo",
             },
           },
-          {
-            $unwind: "$userInfo",
-          },
+          { $unwind: "$sellerInfo" },
         ])
         .toArray();
       res.send(products);
