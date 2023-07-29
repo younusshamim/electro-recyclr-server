@@ -80,7 +80,9 @@ async function startServer() {
           { $unwind: "$sellerInfo" },
         ])
         .toArray();
-      res.send(products);
+
+      const count = await productCollection.estimatedDocumentCount();
+      res.send({ count, products });
     });
 
     app.get("/products/:id", async (req, res) => {
