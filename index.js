@@ -45,12 +45,13 @@ async function startServer() {
     });
 
     app.get("/products", async (req, res) => {
-      const { district, categoryId } = req.query;
+      const { district, categoryId, search } = req.query;
       const page = parseInt(req.query.page);
       const size = parseInt(req.query.size);
       const filter = {};
       if (district) filter.district = district;
       if (categoryId) filter.categoryId = categoryId;
+      if (search) filter.name = { $regex: search, $options: "i" };
 
       const products = await productCollection
         .aggregate([
@@ -81,7 +82,7 @@ async function startServer() {
         ])
         .toArray();
 
-      const count = await productCollection.estimatedDocumentCount();
+      const count = await productCollection.countDocuments(filter);
       res.send({ count, products });
     });
 
