@@ -88,8 +88,19 @@ async function startServer() {
 
     app.get("/products/:id", async (req, res) => {
       const { id } = req.params;
-      const query = { _id: new ObjectId(id) };
-      const product = await productCollection.findOne(query);
+      const productQuery = { _id: new ObjectId(id) };
+      const product = await productCollection.findOne(productQuery);
+      const sellerQuery = { email: product.userEmail };
+      const seller = await userCollection.findOne(sellerQuery, {
+        projection: {
+          _id: 1,
+          name: 1,
+          email: 1,
+          mobile: 1,
+          status: 1,
+        },
+      });
+      product.sellerInfo = seller;
       res.send(product);
     });
 
