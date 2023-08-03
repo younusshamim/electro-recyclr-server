@@ -29,6 +29,9 @@ async function startServer() {
     const productCollection = client
       .db("electroRecyclr")
       .collection("products");
+    const bookingsCollection = client
+      .db("electroRecyclr")
+      .collection("bookings");
 
     // categories api's
     app.get("/categories", async (req, res) => {
@@ -102,6 +105,23 @@ async function startServer() {
       });
       product.sellerInfo = seller;
       res.send(product);
+    });
+
+    // bookings api's
+    app.post("/bookings", async (req, res) => {
+      const payload = { postedTime: new Date().toUTCString(), ...req.body };
+      const result = await bookingsCollection.insertOne(payload);
+      res.send(result);
+    });
+
+    app.get("/bookings", async (req, res) => {
+      const { userEmail, productId } = req.query;
+      const query = {};
+      if (userEmail) query.userEmail = userEmail;
+      if (productId) query.productId = productId;
+      const cursor = bookingsCollection.find(query).sort({ _id: -1 });
+      const orders = await cursor.toArray();
+      res.send(orders);
     });
 
     // users api's
