@@ -48,13 +48,14 @@ async function startServer() {
     });
 
     app.get("/products", async (req, res) => {
-      const { district, categoryId, search } = req.query;
+      const { district, categoryId, search, email } = req.query;
       const page = parseInt(req.query.page);
       const size = parseInt(req.query.size);
       const filter = {};
       if (district) filter.district = district;
       if (categoryId) filter.categoryId = categoryId;
       if (search) filter.name = { $regex: search, $options: "i" };
+      if (email) filter.userEmail = email;
 
       const products = await productCollection
         .aggregate([
@@ -116,12 +117,38 @@ async function startServer() {
 
     app.get("/bookings", async (req, res) => {
       const { userEmail, productId } = req.query;
-      const query = {};
-      if (userEmail) query.userEmail = userEmail;
-      if (productId) query.productId = productId;
-      const cursor = bookingsCollection.find(query).sort({ _id: -1 });
-      const orders = await cursor.toArray();
-      res.send(orders);
+      const filter = {};
+      if (userEmail) filter.userEmail = userEmail;
+      if (productId) filter.productId = productId;
+
+      const bookings = await bookingsCollection
+        .aggregate([
+          { $match: filter },
+          { $sort: { _id: -1 } },
+          {
+            $lookup: {
+              from: "users",
+              localField: "userEmail",
+              foreignField: "email",
+              pipeline: [
+                {
+                  $project: {
+                    _id: 1,
+                    name: 1,
+                    email: 1,
+                    mobile: 1,
+                    img: 1,
+                    status: 1,
+                  },
+                },
+              ],
+              as: "customerInfo",
+            },
+          },
+          { $unwind: "$customerInfo" },
+        ])
+        .toArray();
+      res.send(bookings);
     });
 
     // users api's
