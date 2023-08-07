@@ -108,6 +108,22 @@ async function startServer() {
       res.send(product);
     });
 
+    app.put("/products/status/:id", async (req, res) => {
+      const { id } = req.params;
+      const filter = { _id: new ObjectId(id) };
+      const targetProduct = await productCollection.findOne(filter);
+      const updateDoc = {
+        $set: { isSold: targetProduct?.isSold ? false : true },
+      };
+      const options = { upsert: true };
+      const result = await productCollection.updateOne(
+        filter,
+        updateDoc,
+        options
+      );
+      res.send(result);
+    });
+
     // bookings api's
     app.post("/bookings", async (req, res) => {
       const payload = { postedTime: new Date().toUTCString(), ...req.body };
@@ -149,6 +165,36 @@ async function startServer() {
         ])
         .toArray();
       res.send(bookings);
+    });
+
+    // app.put("/bookings/status/:id", async (req, res) => {
+    //   const { id } = req.params;
+    //   const { isConfirmed } = req.query;
+    //   const filter = { _id: new ObjectId(id) };
+    //   const updateDoc = { $set: { isConfirmed: isConfirmed } };
+    //   const options = { upsert: true };
+    //   const result = await bookingsCollection.updateOne(
+    //     filter,
+    //     updateDoc,
+    //     options
+    //   );
+    //   res.send(result);
+    // });
+
+    app.put("/bookings/status/:id", async (req, res) => {
+      const { id } = req.params;
+      const filter = { _id: new ObjectId(id) };
+      const targetBooking = await bookingsCollection.findOne(filter);
+      const updateDoc = {
+        $set: { isConfirmed: targetBooking?.isConfirmed ? false : true },
+      };
+      const options = { upsert: true };
+      const result = await bookingsCollection.updateOne(
+        filter,
+        updateDoc,
+        options
+      );
+      res.send(result);
     });
 
     // users api's
