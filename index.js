@@ -1,5 +1,7 @@
+//@ts-check
 const express = require("express");
 const cors = require("cors");
+const jwt = require("jsonwebtoken");
 require("dotenv").config();
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const port = process.env.PORT || 5000;
@@ -8,6 +10,21 @@ const app = express();
 // middleware
 app.use(cors());
 app.use(express.json());
+
+function verifyJWT(req, res, next) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader) {
+    return res.status(401).send("unauthorized access");
+  }
+  const token = authHeader.split(" ")[1];
+  jwt.verify(token, process.env.ACCESS_TOKEN, function (err, decoded) {
+    if (err) {
+      return res.status(403).send({ message: "Forbidden Access" });
+    }
+    req.decoded = decoded;
+    next();
+  });
+}
 
 // database setup
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.kflgpze.mongodb.net/?retryWrites=true&w=majority`;
@@ -33,6 +50,31 @@ async function startServer() {
       .db("electroRecyclr")
       .collection("bookings");
 
+    // get jwt token
+    app.get("/jwt", async (req, res) => {
+      const { email } = req.query;
+      const query = { email: email };
+      const user = await userCollection.findOne(query);
+      if (user) {
+        const token = jwt.sign({ email }, process.env.ACCESS_TOKEN, {
+          expiresIn: "1h",
+        });
+        return res.send({ accessToken: token });
+      }
+      res.status(403).send({ accessToken: "" });
+    });
+
+    // middleware || verify admin
+    const verifyAdmin = async (req, res, next) => {
+      const decodedEmail = req.decoded.email;
+      const query = { email: decodedEmail };
+      const user = await userCollection.findOne(query);
+      if (user?.status !== "Admin") {
+        return res.status(403).send({ message: "forbidden access" });
+      }
+      next();
+    };
+
     // categories api's
     app.get("/categories", async (req, res) => {
       const cursor = categoryCollection.find({});
@@ -41,7 +83,7 @@ async function startServer() {
     });
 
     // products api's
-    app.post("/products", async (req, res) => {
+    app.post("/products", verifyJWT, async (req, res) => {
       const payload = { postedTime: new Date().toUTCString(), ...req.body };
       const result = await productCollection.insertOne(payload);
       res.send(result);
@@ -108,7 +150,7 @@ async function startServer() {
       res.send(product);
     });
 
-    app.put("/products/status/:id", async (req, res) => {
+    app.put("/products/status/:id", verifyJWT, async (req, res) => {
       const { id } = req.params;
       const filter = { _id: new ObjectId(id) };
       const targetProduct = await productCollection.findOne(filter);
@@ -125,7 +167,7 @@ async function startServer() {
     });
 
     // bookings api's
-    app.post("/bookings", async (req, res) => {
+    app.post("/bookings", verifyJWT, async (req, res) => {
       const payload = { postedTime: new Date().toUTCString(), ...req.body };
       const result = await bookingsCollection.insertOne(payload);
       res.send(result);
@@ -167,21 +209,7 @@ async function startServer() {
       res.send(bookings);
     });
 
-    // app.put("/bookings/status/:id", async (req, res) => {
-    //   const { id } = req.params;
-    //   const { isConfirmed } = req.query;
-    //   const filter = { _id: new ObjectId(id) };
-    //   const updateDoc = { $set: { isConfirmed: isConfirmed } };
-    //   const options = { upsert: true };
-    //   const result = await bookingsCollection.updateOne(
-    //     filter,
-    //     updateDoc,
-    //     options
-    //   );
-    //   res.send(result);
-    // });
-
-    app.put("/bookings/status/:id", async (req, res) => {
+    app.put("/bookings/status/:id", verifyJWT, async (req, res) => {
       const { id } = req.params;
       const filter = { _id: new ObjectId(id) };
       const targetBooking = await bookingsCollection.findOne(filter);
@@ -198,7 +226,7 @@ async function startServer() {
     });
 
     // users api's
-    app.get("/users", async (req, res) => {
+    app.get("/users", verifyJWT, verifyAdmin, async (req, res) => {
       const { status, search } = req.query;
       const query = {};
       if (status) query.status = status;
@@ -226,7 +254,7 @@ async function startServer() {
       res.send(result);
     });
 
-    app.put("/users/:id", async (req, res) => {
+    app.put("/users/:id", verifyJWT, async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const updateDoc = { $set: req.body };
@@ -235,7 +263,7 @@ async function startServer() {
       res.send(result);
     });
 
-    app.put("/users/status/:id", async (req, res) => {
+    app.put("/users/status/:id", verifyJWT, verifyAdmin, async (req, res) => {
       const { id } = req.params;
       const { status } = req.query;
       const filter = { _id: new ObjectId(id) };
@@ -243,6 +271,14 @@ async function startServer() {
       const options = { upsert: true };
       const result = await userCollection.updateOne(filter, updateDoc, options);
       res.send(result);
+    });
+
+    // is admin check
+    app.get("/users/admin/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = { email };
+      const user = await userCollection.findOne(query);
+      res.send({ isAdmin: user?.status === "Admin" });
     });
 
     app.get("/", (req, res) => res.send("Server Started!"));
