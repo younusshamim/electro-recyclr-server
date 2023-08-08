@@ -174,7 +174,12 @@ async function startServer() {
     });
 
     app.get("/bookings", async (req, res) => {
-      const { userEmail, productId } = req.query;
+      const { userEmail, productId, required } = req.query;
+      if (required) {
+        if (!(userEmail && productId))
+          return res.status(400).send("Paramiter Missing");
+      }
+
       const filter = {};
       if (userEmail) filter.userEmail = userEmail;
       if (productId) filter.productId = productId;
